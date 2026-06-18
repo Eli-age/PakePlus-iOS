@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🧪 有机合成 · 实验记录</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --bg: #eef2f7;
+            --card-bg: #ffffff;
+            --primary: #1e4a7a;
+            --primary-light: #3a7bb5;
+            --accent: #d97706;
+            --danger: #dc2626;
+            --gray: #64748b;
+            --border: #d1d9e6;
+            --shadow: 0 4px 16px rgba(0, 20, 40, 0.08);
+            --radius: 16px;
+            --safe-bottom: env(safe-area-inset-bottom, 12px);
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        body { font-family: var(--font); background: var(--bg); color: #0b2a3b; margin: 0; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; height: 100vh; height: 100dvh; }
+        .view-container { flex: 1; overflow-y: auto; padding: 20px 16px 100px; display: none; flex-direction: column; gap: 20px; }
+        .view-container.active { display: flex; }
+
+        /* 项目列表 */
+        #projectListView .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        #projectListView .header h1 { font-size: 24px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        #projectListView .header .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        #projectListView .header .actions button { background: var(--primary); color: white; border: none; border-radius: 40px; padding: 10px 20px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 74, 122, 0.2); }
+        #projectListView .header .actions button:hover { background: #143a5c; transform: translateY(-2px); }
+        #projectListView .header .actions button.secondary { background: #f1f4f9; color: var(--primary); box-shadow: none; }
+        #projectListView .header .actions button.secondary:hover { background: #e2e8f0; }
+        #projectListView .search-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: white; padding: 6px 14px; border-radius: 40px; border: 1px solid var(--border); }
+        #projectListView .search-bar input { border: none; outline: none; padding: 8px 0; flex: 1; min-width: 120px; font-size: 15px; background: transparent; }
+        #projectListView .search-bar button { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--gray); }
+        .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+        .project-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px 16px; box-shadow: var(--shadow); border-left: 6px solid var(--primary); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 6px; position: relative; border: 1px solid rgba(255,255,255,0.5); user-select: none; }
+        .project-card.dragging { opacity: 0.5; transform: scale(0.97); cursor: grabbing; }
+        .project-card.drag-over { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.2); }
+        .project-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0, 20, 40, 0.12); }
+        .project-card .project-name { font-weight: 700; font-size: 18px; color: var(--primary); }
+        .project-card .project-code { font-size: 14px; color: var(--gray); }
+        .project-card .project-meta { font-size: 13px; color: var(--gray); margin-top: 4px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; }
+        .project-card .project-meta span { display: inline-flex; align-items: center; gap: 4px; }
+        .project-card .project-delete { position: absolute; top: 8px; right: 8px; background: rgba(220, 38, 38, 0.08); border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; color: var(--danger); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.4; }
+        .project-card .project-delete:hover { opacity: 1; background: rgba(220, 38, 38, 0.15); }
+        .project-card .project-edit { position: absolute; top: 8px; right: 44px; background: rgba(30, 74, 122, 0.08); border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 14px; color: var(--primary); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.4; }
+        .project-card .project-edit:hover { opacity: 1; background: rgba(30, 74, 122, 0.15); }
+
+        /* 实验列表 */
+        #experimentListView .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        #experimentListView .header .left { display: flex; align-items: center; gap: 12px; }
+        #experimentListView .header .left .back-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 30px; padding: 6px 16px; font-size: 16px; cursor: pointer; font-weight: 600; color: var(--primary); transition: 0.15s; line-height: 1.4; }
+        #experimentListView .header .left .back-btn:active { background: var(--border); }
+        #experimentListView .header .left .project-title { font-weight: 700; font-size: 20px; color: var(--primary); }
+        #experimentListView .header .right { display: flex; gap: 8px; }
+        #experimentListView .header .right button { background: var(--primary); color: white; border: none; border-radius: 40px; padding: 8px 18px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 74, 122, 0.2); }
+        #experimentListView .header .right button:hover { background: #143a5c; transform: translateY(-2px); }
+        .experiment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .experiment-card { background: var(--card-bg); border-radius: var(--radius); padding: 18px 16px; box-shadow: var(--shadow); border-left: 6px solid var(--accent); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 6px; position: relative; border: 1px solid rgba(255,255,255,0.5); user-select: none; }
+        .experiment-card.dragging { opacity: 0.5; transform: scale(0.97); cursor: grabbing; }
+        .experiment-card.drag-over { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.2); }
+        .experiment-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0, 20, 40, 0.12); }
+        .experiment-card .experiment-date { font-weight: 700; font-size: 18px; color: var(--primary); }
+        .experiment-card .experiment-meta { font-size: 14px; color: var(--gray); display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .experiment-card .experiment-meta span { display: inline-flex; align-items: center; gap: 4px; }
+        .experiment-card .experiment-delete { position: absolute; top: 8px; right: 8px; background: rgba(220, 38, 38, 0.08); border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; color: var(--danger); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.4; }
+        .experiment-card .experiment-delete:hover { opacity: 1; background: rgba(220, 38, 38, 0.15); }
+
+        /* 记录视图 */
+        #recordView { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+        #recordView.active { display: flex; }
+        .record-nav { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); padding: 8px 16px; border-bottom: 2px solid var(--border); flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .record-nav .back-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 30px; padding: 4px 14px; font-size: 16px; cursor: pointer; font-weight: 600; color: var(--primary); transition: 0.15s; line-height: 1.4; }
+        .record-nav .back-btn:active { background: var(--border); }
+        .record-nav .project-title { font-weight: 700; font-size: 18px; color: var(--primary); margin-right: 4px; }
+        .record-nav .project-code-display { font-size: 14px; color: var(--gray); }
+        .record-nav .date-display { font-weight: 600; font-size: 16px; color: var(--accent); margin-left: 8px; }
+        .record-nav .nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+        .record-nav .date-nav { display: flex; align-items: center; gap: 4px; }
+        .record-nav .date-picker { font-size: 15px; font-weight: 500; border: 1px solid var(--border); border-radius: 30px; padding: 4px 12px; background: white; color: var(--primary); width: 150px; text-align: center; transition: 0.2s; }
+        .record-nav .date-picker:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.15); }
+        .record-nav .nav-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 30px; padding: 4px 12px; font-size: 18px; cursor: pointer; font-weight: 600; color: var(--primary); transition: 0.15s; line-height: 1.4; }
+        .record-nav .nav-btn:active { background: var(--border); }
+        .record-nav .env-inputs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .record-nav .env-inputs label { font-size: 13px; font-weight: 500; color: var(--gray); }
+        .record-nav .env-inputs input { width: 56px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 20px; font-size: 14px; text-align: center; background: white; }
+        .record-nav .env-inputs input:focus { outline: none; border-color: var(--primary); }
+        .record-nav .weekday { font-size: 14px; color: var(--gray); margin-left: 4px; }
+        .record-nav .action-buttons { display: flex; gap: 6px; align-items: center; }
+        .record-nav .action-buttons button { background: var(--bg); border: 1px solid var(--border); border-radius: 30px; padding: 4px 14px; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.15s; color: var(--primary); }
+        .record-nav .action-buttons button:hover { background: var(--border); }
+        .record-nav .action-buttons button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .record-nav .action-buttons button.primary:hover { background: #143a5c; }
+
+        .timeline { flex: 1; overflow-y: auto; padding: 20px 16px 100px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
+        .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; border-left: 6px solid var(--gray); transition: all 0.2s ease; position: relative; cursor: pointer; user-select: none; border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(2px); }
+        .card:hover { box-shadow: 0 8px 24px rgba(0, 20, 40, 0.12); transform: translateY(-2px); }
+        .card.dragging { opacity: 0.5; transform: scale(0.97); cursor: grabbing; }
+        .card.drag-over { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.2); }
+        .card.reaction { border-left-color: #2563eb; }
+        .card.tlc { border-left-color: #d97706; }
+        .card.hplc { border-left-color: #7c3aed; }
+        .card.gc { border-left-color: #0891b2; }
+        .card.lcms { border-left-color: #059669; }
+        .card.gcms { border-left-color: #dc2626; }
+        .card.nmr { border-left-color: #db2777; }
+        .card.conclusion { border-left-color: #4f46e5; background: linear-gradient(135deg, #f8fafc, #eef2ff); }
+        .card .card-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
+        .card .card-title .title-icon { font-size: 20px; margin-right: 6px; }
+        .card .card-body { font-size: 14px; line-height: 1.7; color: #1e3a5f; }
+        .card .card-body .tag { display: inline-block; background: #e8edf5; padding: 2px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; color: var(--primary); margin-right: 4px; }
+        .card .card-body .text-muted { color: var(--gray); }
+        .card .card-body .has-image { display: inline-block; background: #dbeafe; padding: 1px 10px; border-radius: 20px; font-size: 12px; color: var(--primary); margin-top: 4px; }
+        .card .card-delete { position: absolute; bottom: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; background: rgba(220, 38, 38, 0.08); border: none; color: var(--danger); font-size: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.4; backdrop-filter: blur(4px); }
+        .card .card-delete:hover { opacity: 1; background: rgba(220, 38, 38, 0.15); transform: scale(1.1); }
+        .card .card-delete:active { transform: scale(0.9); }
+
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 10px 12px calc(10px + var(--safe-bottom)); display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; align-items: center; z-index: 20; box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04); -webkit-overflow-scrolling: touch; }
+        .bottom-bar .btn-tool { flex: 0 0 auto; border: none; background: #f1f4f9; color: var(--primary); font-size: 14px; font-weight: 500; padding: 10px 18px; border-radius: 40px; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; border: 1px solid transparent; }
+        .bottom-bar .btn-tool:active { transform: scale(0.94); }
+        .bottom-bar .btn-tool.primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(30, 74, 122, 0.25); }
+        .bottom-bar .btn-tool.primary:active { background: #143a5c; }
+        .bottom-bar .btn-tool:hover { background: #e2e8f0; }
+
+        /* 模态框 - 固定头部/底部，中间滚动 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(10, 30, 50, 0.6); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 100; animation: fadeIn 0.2s; }
+        .modal-overlay.open { display: flex; }
+        .modal-sheet { background: white; border-radius: 24px; width: 90%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.1s ease; will-change: transform; touch-action: auto; }
+        .modal-sheet.fullscreen { max-width: 98vw; max-height: 98vh; width: 98vw; height: 98vh; border-radius: 8px; padding: 20px 24px; }
+        .modal-sheet .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px 12px; flex-shrink: 0; cursor: grab; touch-action: none; user-select: none; border-bottom: 2px solid var(--border); }
+        .modal-sheet .modal-header:active { cursor: grabbing; }
+        .modal-sheet .modal-header h3 { font-size: 20px; font-weight: 700; color: var(--primary); margin: 0; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+        .modal-sheet .modal-header .modal-controls { display: flex; gap: 8px; }
+        .modal-sheet .modal-header .modal-controls button { background: var(--bg); border: none; border-radius: 30px; padding: 4px 14px; font-size: 16px; cursor: pointer; transition: 0.15s; color: var(--primary); line-height: 1.6; }
+        .modal-sheet .modal-header .modal-controls button:hover { background: var(--border); }
+        .modal-sheet .modal-header .modal-controls .close-btn { background: #fee2e2; color: #dc2626; }
+        .modal-sheet .modal-header .modal-controls .close-btn:hover { background: #fecaca; }
+        .modal-sheet .modal-body { flex: 1; overflow-y: auto; padding: 16px 24px 8px; -webkit-overflow-scrolling: touch; }
+        .modal-sheet .modal-footer { flex-shrink: 0; padding: 12px 24px 20px; border-top: 1px solid var(--border); margin-top: 4px; }
+        .modal-sheet .modal-footer .btn-group { display: flex; gap: 12px; }
+        .modal-sheet .modal-footer .btn-group .btn { flex: 1; padding: 14px; border: none; border-radius: 60px; font-weight: 600; font-size: 16px; cursor: pointer; transition: 0.15s; }
+        .modal-sheet .modal-footer .btn-group .btn-primary { background: var(--primary); color: white; }
+        .modal-sheet .modal-footer .btn-group .btn-primary:active { background: #143a5c; }
+        .modal-sheet .modal-footer .btn-group .btn-secondary { background: var(--bg); color: var(--primary); }
+        .modal-sheet .modal-footer .btn-group .btn-secondary:active { background: var(--border); }
+
+        /* 内部表单元素 */
+        .modal-sheet label { font-weight: 600; font-size: 14px; display: block; margin-top: 14px; margin-bottom: 4px; color: var(--primary); }
+        .modal-sheet input, .modal-sheet textarea, .modal-sheet select { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 15px; background: #fafcff; transition: 0.15s; font-family: inherit; color: #0b2a3b; }
+        .modal-sheet input:focus, .modal-sheet textarea:focus, .modal-sheet select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.1); background: white; }
+        .modal-sheet .date-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; background: #fafcff; }
+        .modal-sheet .date-checkbox-list .date-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #f1f4f9; }
+        .modal-sheet .date-checkbox-list .date-item:last-child { border-bottom: none; }
+        .modal-sheet .date-checkbox-list .date-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+        .modal-sheet .date-checkbox-list .date-item label { margin: 0; font-weight: normal; color: #0b2a3b; cursor: pointer; flex: 1; }
+        .modal-sheet .date-checkbox-list .date-item .record-count { font-size: 12px; color: var(--gray); margin-left: auto; }
+
+        .drop-zone { border: 2px dashed var(--border); border-radius: 16px; padding: 20px; text-align: center; background: #fafcff; transition: 0.2s; color: var(--gray); font-size: 14px; cursor: pointer; position: relative; margin-bottom: 8px; }
+        .drop-zone.dragover { border-color: var(--primary); background: rgba(30, 74, 122, 0.05); }
+        .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .drop-zone .hint { pointer-events: none; }
+        .drop-zone .hint .icon { font-size: 32px; display: block; margin-bottom: 6px; }
+        .entry-group { margin-bottom: 8px; }
+        .entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+        .entry-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafcff; }
+        .entry-row .remove-entry { color: var(--gray); font-size: 20px; cursor: pointer; padding: 0 4px; font-weight: 300; }
+        .add-entry-btn { background: var(--bg); border: 1px dashed var(--border); border-radius: 20px; padding: 6px 16px; font-size: 14px; color: var(--gray); cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+        .add-entry-btn:active { background: var(--border); }
+
+        .image-preview-wrapper { position: relative; display: inline-block; width: 100%; margin: 8px 0; }
+        .image-preview-wrapper img { max-width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+        .image-preview-wrapper .remove-img-btn { position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.7); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: 0.15s; }
+        .image-preview-wrapper .remove-img-btn:hover { background: rgba(220, 38, 38, 0.9); }
+        .empty-state { text-align: center; color: var(--gray); padding: 48px 20px; background: rgba(255,255,255,0.6); border-radius: var(--radius); border: 2px dashed var(--border); }
+        .empty-state .icon { font-size: 52px; margin-bottom: 16px; }
+        .empty-state h4 { font-weight: 600; font-size: 18px; color: var(--primary); }
+        .empty-state p { margin-top: 8px; font-size: 14px; }
+        .hidden { display: none; }
+        .text-muted { color: var(--gray); }
+        .mt-8 { margin-top: 8px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @media (max-width: 480px) {
+            .bottom-bar .btn-tool { font-size: 13px; padding: 8px 14px; }
+            .record-nav .date-picker { width: 120px; font-size: 13px; }
+            .record-nav .env-inputs input { width: 44px; }
+            .record-nav .nav-btn { padding: 2px 10px; font-size: 16px; }
+            .record-nav .project-title { font-size: 16px; }
+            .modal-sheet { width: 96%; max-height: 90vh; }
+            .modal-sheet .modal-header { padding: 12px 16px 8px; }
+            .modal-sheet .modal-body { padding: 12px 16px 8px; }
+            .modal-sheet .modal-footer { padding: 8px 16px 16px; }
+            .card .card-delete { width: 28px; height: 28px; font-size: 16px; bottom: 8px; right: 8px; }
+            .project-grid, .experiment-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .image-viewer { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+        .image-viewer.open { display: flex; }
+        .image-viewer .viewer-toolbar { position: absolute; top: 20px; right: 20px; display: flex; gap: 12px; z-index: 10; }
+        .image-viewer .viewer-toolbar button { background: rgba(255, 255, 255, 0.2); border: none; color: white; padding: 8px 16px; border-radius: 40px; font-size: 14px; cursor: pointer; backdrop-filter: blur(4px); transition: 0.15s; }
+        .image-viewer .viewer-toolbar button:hover { background: rgba(255, 255, 255, 0.4); }
+        .image-viewer .viewer-content { max-width: 95vw; max-height: 85vh; position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        .image-viewer .viewer-content img { max-width: 95vw; max-height: 85vh; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+        .image-viewer .viewer-content canvas { max-width: 95vw; max-height: 85vh; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); cursor: crosshair; background: #1a1a1a; }
+        .image-viewer .crop-info { color: white; margin-top: 12px; font-size: 14px; opacity: 0.8; text-align: center; }
+    </style>
+</head>
+<body>
+    <!-- 第一分区：项目列表 -->
+    <div id="projectListView" class="view-container active">
+        <div class="header">
+            <h1>🧪 我的项目</h1>
+            <div class="actions">
+                <button id="newProjectBtn">➕ 新建项目</button>
+                <button id="exportSelectedProjectsBtn" class="secondary">📤 导出项目</button>
+                <button id="importBtn" class="secondary">📥 导入数据</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;" />
+            </div>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔍 搜索项目名称/代号/日期..." />
+            <button id="searchClearBtn" style="display:none;">✕</button>
+        </div>
+        <div class="project-grid" id="projectGrid"></div>
+    </div>
+
+    <!-- 第二分区：实验列表 -->
+    <div id="experimentListView" class="view-container">
+        <div class="header">
+            <div class="left">
+                <button class="back-btn" id="expBackToProjects">‹ 返回</button>
+                <span class="project-title" id="expProjectTitle">项目名称</span>
+            </div>
+            <div class="right">
+                <button id="newExperimentBtn">➕ 新建实验</button>
+            </div>
+        </div>
+        <div class="experiment-grid" id="experimentGrid"></div>
+    </div>
+
+    <!-- 第三分区：记录视图 -->
+    <div id="recordView">
+        <div class="record-nav" id="recordNav">
+            <button class="back-btn" id="recordBackToExperiments">‹ 返回实验列表</button>
+            <span class="project-title" id="recordProjectTitle">项目</span>
+            <span class="date-display" id="recordDateDisplay">日期</span>
+            <div class="nav-right">
+                <div class="date-nav">
+                    <button class="nav-btn" id="prevDay">‹</button>
+                    <input type="date" class="date-picker" id="datePicker" min="2026-01-01" max="2030-12-31" />
+                    <button class="nav-btn" id="nextDay">›</button>
+                    <span class="weekday" id="weekdayDisplay"></span>
+                </div>
+                <div class="env-inputs">
+                    <label>🌡️</label>
+                    <input type="number" id="tempInput" placeholder="℃" step="0.1" />
+                    <label>💧</label>
+                    <input type="number" id="humidityInput" placeholder="%" step="1" />
+                </div>
+                <div class="action-buttons">
+                    <button id="exportSelectedBtn" class="primary">📤 导出选定日期</button>
+                </div>
+            </div>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <div class="bottom-bar" id="bottomBar">
+            <button class="btn-tool primary" data-tool="reaction">⚗️ 投料</button>
+            <button class="btn-tool" data-tool="tlc">🖍️ TLC</button>
+            <button class="btn-tool" data-tool="hplc">🧪 HPLC</button>
+            <button class="btn-tool" data-tool="gc">🔥 GC</button>
+            <button class="btn-tool" data-tool="lcms">💧 LC-MS</button>
+            <button class="btn-tool" data-tool="gcms">🔥 GC-MS</button>
+            <button class="btn-tool" data-tool="nmr">🔬 核磁</button>
+            <button class="btn-tool" data-tool="conclusion">📋 结论</button>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet" id="modalSheet"></div>
+    </div>
+
+    <!-- 图片查看器 -->
+    <div class="image-viewer" id="imageViewer">
+        <div class="viewer-toolbar">
+            <button id="viewerCropBtn">✂️ 裁剪</button>
+            <button id="viewerCloseBtn">✕ 关闭</button>
+        </div>
+        <div class="viewer-content" id="viewerContent">
+            <img id="viewerImg" src="" alt="图片" />
+            <canvas id="viewerCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="crop-info" id="viewerInfo">点击 "裁剪" 按钮进入裁剪模式</div>
+    </div>
+
+    <script>
+        // ======================================================================
+        //  数据层
+        // ======================================================================
+        const STORAGE_KEY = 'organic_eln_data_v19';
+        let appData = loadData();
+
+        function loadData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.projects && Array.isArray(parsed.projects)) {
+                        return parsed;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+            return { projects: [] };
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        }
+
+        function genId() { return 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+        function genCardId() { return Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+
+        function getCurrentProject() {
+            if (!currentProjectId) return null;
+            return appData.projects.find(p => p.id === currentProjectId) || null;
+        }
+
+        function getProjectRecords(projectId, dateStr) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return [];
+            if (!proj.records) proj.records = {};
+            if (!proj.records[dateStr]) proj.records[dateStr] = [];
+            return proj.records[dateStr];
+        }
+
+        function getProjectConditions(projectId, dateStr) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return { temp: '', humidity: '' };
+            if (!proj.conditions) proj.conditions = {};
+            if (!proj.conditions[dateStr]) proj.conditions[dateStr] = { temp: '', humidity: '' };
+            return proj.conditions[dateStr];
+        }
+
+        function setProjectConditions(projectId, dateStr, cond) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            if (!proj.conditions) proj.conditions = {};
+            proj.conditions[dateStr] = cond;
+            saveData();
+        }
+
+        function addCardToProject(projectId, dateStr, card) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            if (!proj.records) proj.records = {};
+            if (!proj.records[dateStr]) proj.records[dateStr] = [];
+            card.id = genCardId();
+            card.timestamp = Date.now();
+            proj.records[dateStr].push(card);
+            saveData();
+            renderRecordView();
+        }
+
+        function updateCardInProject(projectId, dateStr, cardId, updates) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            const records = proj.records[dateStr] || [];
+            const idx = records.findIndex(c => c.id === cardId);
+            if (idx !== -1) {
+                records[idx] = { ...records[idx], ...updates };
+                saveData();
+                renderRecordView();
+            }
+        }
+
+        function deleteCardFromProject(projectId, dateStr, cardId) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            const records = proj.records[dateStr] || [];
+            const idx = records.findIndex(c => c.id === cardId);
+            if (idx !== -1) {
+                records.splice(idx, 1);
+                saveData();
+                renderRecordView();
+            }
+        }
+
+        function moveCardInProject(projectId, dateStr, fromIndex, toIndex) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            const records = proj.records[dateStr] || [];
+            if (fromIndex < 0 || fromIndex >= records.length || toIndex < 0 || toIndex >= records.length) return;
+            const [removed] = records.splice(fromIndex, 1);
+            records.splice(toIndex, 0, removed);
+            records.forEach((c, i) => { c.timestamp = Date.now() + i; });
+            saveData();
+            renderRecordView();
+        }
+
+        function deleteExperiment(projectId, dateStr) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            if (proj.records && proj.records[dateStr]) {
+                delete proj.records[dateStr];
+                if (proj.conditions) delete proj.conditions[dateStr];
+                if (proj.projectInfo) delete proj.projectInfo[dateStr];
+                saveData();
+                renderExperimentList();
+            }
+        }
+
+        // ======================================================================
+        //  状态与视图切换
+        // ======================================================================
+        let currentProjectId = null;
+        let currentDate = getToday();
+        let dragData = null;
+
+        function getToday() {
+            const d = new Date();
+            return d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+        }
+
+        function showProjectListView() {
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('projectListView').classList.add('active');
+            document.getElementById('recordView').classList.remove('active');
+            document.getElementById('recordView').style.display = 'none';
+            currentProjectId = null;
+            renderProjectList();
+        }
+
+        function showExperimentListView(projectId) {
+            currentProjectId = projectId;
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('experimentListView').classList.add('active');
+            document.getElementById('recordView').classList.remove('active');
+            document.getElementById('recordView').style.display = 'none';
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (proj) {
+                document.getElementById('expProjectTitle').textContent = proj.name;
+            }
+            renderExperimentList();
+        }
+
+        function showRecordView(projectId, dateStr) {
+            currentProjectId = projectId;
+            currentDate = dateStr || getToday();
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('experimentListView').classList.remove('active');
+            document.getElementById('recordView').style.display = 'flex';
+            document.getElementById('recordView').classList.add('active');
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (proj) {
+                document.getElementById('recordProjectTitle').textContent = proj.name;
+            }
+            document.getElementById('recordDateDisplay').textContent = currentDate;
+            renderRecordView();
+        }
+
+        // ======================================================================
+        //  渲染：项目列表 (支持搜索、拖拽、编辑)
+        // ======================================================================
+        function renderProjectList() {
+            const grid = document.getElementById('projectGrid');
+            const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+            let filtered = appData.projects;
+            if (searchTerm) {
+                filtered = appData.projects.filter(p => {
+                    const nameMatch = p.name.toLowerCase().includes(searchTerm);
+                    const codeMatch = p.code && p.code.toLowerCase().includes(searchTerm);
+                    let dateMatch = false;
+                    if (p.records) {
+                        for (const date of Object.keys(p.records)) {
+                            if (date.includes(searchTerm)) { dateMatch = true; break; }
+                            for (const card of p.records[date] || []) {
+                                const str = JSON.stringify(card).toLowerCase();
+                                if (str.includes(searchTerm)) { dateMatch = true; break; }
+                            }
+                            if (dateMatch) break;
+                        }
+                    }
+                    return nameMatch || codeMatch || dateMatch;
+                });
+            }
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--gray);">
+                    <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+                    <h4 style="color:var(--primary);">没有匹配的项目</h4><p>尝试调整搜索关键词</p></div>`;
+                return;
+            }
+            let html = '';
+            for (const proj of filtered) {
+                const records = proj.records || {};
+                const dates = Object.keys(records).filter(d => records[d].length > 0);
+                const totalRecords = dates.reduce((sum, d) => sum + records[d].length, 0);
+                const dayCount = dates.length;
+                const lastDate = dates.length ? dates.sort().reverse()[0] : '无';
+                html += `
+                    <div class="project-card" data-project-id="${proj.id}" draggable="true">
+                        <div class="project-name">${proj.name}</div>
+                        <div class="project-code">${proj.code || '无代号'}</div>
+                        <div class="project-meta">
+                            <span>📝 ${totalRecords} 条记录</span>
+                            <span>📅 ${dayCount} 天</span>
+                            <span>🕒 ${lastDate !== '无' ? lastDate : '无记录'}</span>
+                        </div>
+                        <button class="project-edit" data-action="edit" title="编辑项目">✏️</button>
+                        <button class="project-delete" data-action="delete" title="删除项目">🗑️</button>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+
+            // 点击卡片主体进入第二分区
+            grid.addEventListener('click', (e) => {
+                const card = e.target.closest('.project-card');
+                if (!card) return;
+                if (e.target.closest('.project-delete') || e.target.closest('.project-edit')) return;
+                const id = card.dataset.projectId;
+                showExperimentListView(id);
+            });
+
+            grid.querySelectorAll('.project-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const card = btn.closest('.project-card');
+                    const id = card.dataset.projectId;
+                    openProjectEditModal(id);
+                });
+            });
+            grid.querySelectorAll('.project-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const card = btn.closest('.project-card');
+                    const id = card.dataset.projectId;
+                    if (confirm('确定要删除这个项目及其所有数据吗？')) {
+                        appData.projects = appData.projects.filter(p => p.id !== id);
+                        saveData();
+                        renderProjectList();
+                    }
+                });
+            });
+
+            // 拖拽排序
+            grid.querySelectorAll('.project-card').forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    dragData = { id: card.dataset.projectId, fromIndex: Array.from(grid.children).indexOf(card) };
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', card.dataset.projectId);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.project-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+                });
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    card.classList.add('drag-over');
+                });
+                card.addEventListener('dragleave', (e) => {
+                    card.classList.remove('drag-over');
+                });
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over');
+                    if (!dragData) return;
+                    const targetId = card.dataset.projectId;
+                    if (dragData.id === targetId) return;
+                    const targetIndex = Array.from(grid.children).indexOf(card);
+                    const projects = appData.projects;
+                    const [removed] = projects.splice(dragData.fromIndex, 1);
+                    projects.splice(targetIndex, 0, removed);
+                    saveData();
+                    renderProjectList();
+                    dragData = null;
+                });
+            });
+        }
+
+        function openProjectEditModal(projectId) {
+            const proj = appData.projects.find(p => p.id === projectId);
+            if (!proj) return;
+            const bodyHtml = `
+                <label>项目名称</label>
+                <input type="text" id="editProjName" value="${proj.name}" />
+                <label>项目代号</label>
+                <input type="text" id="editProjCode" value="${proj.code || ''}" placeholder="可选" />
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="editProjCancel">取消</button>
+                    <button class="btn btn-primary" id="editProjConfirm">保存</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '✏️ 编辑项目');
+            document.getElementById('editProjCancel').addEventListener('click', closeModal);
+            document.getElementById('editProjConfirm').addEventListener('click', () => {
+                const name = document.getElementById('editProjName').value.trim();
+                const code = document.getElementById('editProjCode').value.trim();
+                if (!name) { alert('请输入项目名称'); return; }
+                proj.name = name;
+                proj.code = code;
+                saveData();
+                closeModal();
+                renderProjectList();
+            });
+        }
+
+        // ======================================================================
+        //  渲染：实验列表 (第二分区)
+        // ======================================================================
+        function renderExperimentList() {
+            const grid = document.getElementById('experimentGrid');
+            if (!currentProjectId) return;
+            const proj = getCurrentProject();
+            if (!proj) { showProjectListView(); return; }
+            const records = proj.records || {};
+            const dates = Object.keys(records).filter(d => records[d].length > 0);
+            if (dates.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--gray);">
+                    <div style="font-size:48px;margin-bottom:12px;">🧪</div>
+                    <h4 style="color:var(--primary);">还没有实验</h4><p>点击 "新建实验" 开始记录</p></div>`;
+                return;
+            }
+            const sortedDates = dates.sort((a, b) => b.localeCompare(a));
+            let html = '';
+            for (const date of sortedDates) {
+                const cards = records[date] || [];
+                const count = cards.length;
+                const lastTime = cards.length ? new Date(cards[cards.length-1].timestamp).toLocaleTimeString() : '—';
+                html += `
+                    <div class="experiment-card" data-date="${date}" draggable="true">
+                        <div class="experiment-date">📅 ${date}</div>
+                        <div class="experiment-meta">
+                            <span>📝 ${count} 条记录</span>
+                            <span>🕒 ${lastTime}</span>
+                        </div>
+                        <button class="experiment-delete" data-date="${date}" title="删除此实验">🗑️</button>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+
+            grid.querySelectorAll('.experiment-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.experiment-delete')) return;
+                    const date = card.dataset.date;
+                    showRecordView(currentProjectId, date);
+                });
+                const del = card.querySelector('.experiment-delete');
+                if (del) {
+                    del.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const date = del.dataset.date;
+                        if (confirm(`确定要删除 ${date} 的实验记录吗？`)) {
+                            deleteExperiment(currentProjectId, date);
+                        }
+                    });
+                }
+            });
+
+            // 拖拽排序
+            grid.querySelectorAll('.experiment-card').forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    dragData = { date: card.dataset.date, fromIndex: Array.from(grid.children).indexOf(card) };
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', card.dataset.date);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.experiment-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+                });
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    card.classList.add('drag-over');
+                });
+                card.addEventListener('dragleave', (e) => {
+                    card.classList.remove('drag-over');
+                });
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over');
+                    if (!dragData) return;
+                    const targetDate = card.dataset.date;
+                    if (dragData.date === targetDate) return;
+                    const targetIndex = Array.from(grid.children).indexOf(card);
+                    const datesArr = sortedDates;
+                    const [removed] = datesArr.splice(dragData.fromIndex, 1);
+                    datesArr.splice(targetIndex, 0, removed);
+                    if (!proj.experimentOrder) proj.experimentOrder = [];
+                    proj.experimentOrder = datesArr;
+                    saveData();
+                    renderExperimentList();
+                    dragData = null;
+                });
+            });
+        }
+
+        // ======================================================================
+        //  渲染：记录视图 (第三分区)
+        // ======================================================================
+        function renderRecordView() {
+            if (!currentProjectId) return;
+            const proj = getCurrentProject();
+            if (!proj) { showProjectListView(); return; }
+
+            const picker = document.getElementById('datePicker');
+            picker.value = currentDate;
+            const d = new Date(currentDate + 'T00:00:00');
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            document.getElementById('weekdayDisplay').textContent = `周${weekdays[d.getDay()]}`;
+            document.getElementById('recordDateDisplay').textContent = currentDate;
+
+            const cond = getProjectConditions(currentProjectId, currentDate);
+            document.getElementById('tempInput').value = cond.temp || '';
+            document.getElementById('humidityInput').value = cond.humidity || '';
+
+            const container = document.getElementById('timeline');
+            const records = getProjectRecords(currentProjectId, currentDate);
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🧪</div>
+                        <h4>该实验暂无记录</h4>
+                        <p>点击底部按钮添加实验数据</p>
+                    </div>
+                `;
+                return;
+            }
+            const sorted = [...records].sort((a, b) => a.timestamp - b.timestamp);
+            let html = '';
+            for (let i = 0; i < sorted.length; i++) {
+                const card = sorted[i];
+                html += renderRecordCard(card, i);
+            }
+            container.innerHTML = html;
+
+            container.querySelectorAll('.card').forEach(cardEl => {
+                cardEl.addEventListener('click', (e) => {
+                    if (e.target.closest('.card-delete')) return;
+                    const cardId = cardEl.dataset.cardId;
+                    openEditCardModal(cardId);
+                });
+                const delBtn = cardEl.querySelector('.card-delete');
+                if (delBtn) {
+                    delBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = cardEl.dataset.cardId;
+                        if (confirm('确定要删除这条记录吗？')) {
+                            deleteCardFromProject(currentProjectId, currentDate, cardId);
+                        }
+                    });
+                }
+                cardEl.draggable = true;
+                cardEl.addEventListener('dragstart', (e) => {
+                    dragData = { cardId: cardEl.dataset.cardId, fromIndex: parseInt(cardEl.dataset.index) };
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', cardEl.dataset.cardId);
+                    cardEl.classList.add('dragging');
+                });
+                cardEl.addEventListener('dragend', (e) => {
+                    cardEl.classList.remove('dragging');
+                    document.querySelectorAll('.card.drag-over').forEach(el => el.classList.remove('drag-over'));
+                });
+                cardEl.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    cardEl.classList.add('drag-over');
+                });
+                cardEl.addEventListener('dragleave', (e) => {
+                    cardEl.classList.remove('drag-over');
+                });
+                cardEl.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    cardEl.classList.remove('drag-over');
+                    if (!dragData) return;
+                    const targetId = cardEl.dataset.cardId;
+                    if (dragData.cardId === targetId) return;
+                    const targetIndex = parseInt(cardEl.dataset.index);
+                    moveCardInProject(currentProjectId, currentDate, dragData.fromIndex, targetIndex);
+                    dragData = null;
+                });
+            });
+        }
+
+        function renderRecordCard(card, index) {
+            const base = 'card';
+            let typeClass = '', content = '', titleIcon = '', titleText = '';
+            switch (card.type) {
+                case 'reaction':
+                    typeClass = 'reaction';
+                    titleIcon = '⚗️';
+                    titleText = '投料';
+                    const smList = (card.sm || []).map(s => `<span class="tag">SM</span> ${s}`).join(' ');
+                    const reagentList = (card.reagent || []).map(r => `<span class="tag">试剂</span> ${r}`).join(' ');
+                    content = `<div class="card-body"><div>${smList}</div><div>${reagentList}</div>${card.notes ? `<div class="mt-8 text-muted">📝 ${card.notes}</div>` : ''}${card.dataUrl ? `<div class="has-image">🖼️ 有图片</div>` : ''}</div>`;
+                    break;
+                case 'tlc':
+                    typeClass = 'tlc';
+                    titleIcon = '🖍️';
+                    titleText = 'TLC 分析';
+                    content = `<div class="card-body"><div><span class="tag">展开剂</span> ${card.eluent || '—'}</div>${card.notes ? `<div class="mt-8 text-muted">📝 ${card.notes}</div>` : ''}${card.dataUrl ? `<div class="has-image">🖼️ 有图片</div>` : ''}</div>`;
+                    break;
+                case 'hplc':
+                case 'gc':
+                case 'lcms':
+                case 'gcms':
+                case 'nmr': {
+                    const names = { hplc:'HPLC', gc:'GC', lcms:'LC-MS', gcms:'GC-MS', nmr:'核磁' };
+                    const icons = { hplc:'🧪', gc:'🔥', lcms:'💧', gcms:'🔥', nmr:'🔬' };
+                    typeClass = card.type;
+                    titleIcon = icons[card.type] || '🔬';
+                    titleText = names[card.type] || card.type;
+                    content = `<div class="card-body">${card.conditions ? `<div><span class="tag">条件</span> ${card.conditions}</div>` : ''}${card.notes ? `<div class="mt-8 text-muted">📝 ${card.notes}</div>` : ''}${card.dataUrl ? `<div class="has-image">🖼️ 有图片</div>` : ''}</div>`;
+                    break;
+                }
+                case 'conclusion':
+                    typeClass = 'conclusion';
+                    titleIcon = '📋';
+                    titleText = '实验结论';
+                    content = `<div class="card-body">${card.text ? `<div>${card.text}</div>` : '<div class="text-muted">无内容</div>'}${card.dataUrl ? `<div class="has-image">🖼️ 有图片</div>` : ''}</div>`;
+                    break;
+                default:
+                    content = `<div class="card-body">未知类型</div>`;
+            }
+            return `<div class="${base} ${typeClass}" data-card-id="${card.id}" data-index="${index}">
+                <div class="card-title"><span><span class="title-icon">${titleIcon}</span> ${titleText}</span></div>
+                ${content}
+                <button class="card-delete" title="删除记录">🗑️</button>
+            </div>`;
+        }
+
+        // ======================================================================
+        //  编辑卡片通用入口
+        // ======================================================================
+        function openEditCardModal(cardId) {
+            if (!currentProjectId) return;
+            const records = getProjectRecords(currentProjectId, currentDate);
+            const card = records.find(c => c.id === cardId);
+            if (!card) return;
+            switch (card.type) {
+                case 'reaction':
+                    openReactionModal(card);
+                    break;
+                case 'tlc':
+                    openTLCModal(card);
+                    break;
+                case 'hplc':
+                case 'gc':
+                case 'lcms':
+                case 'gcms':
+                case 'nmr':
+                    openInstrumentModal(card.type, card);
+                    break;
+                case 'conclusion':
+                    openConclusionModal(card);
+                    break;
+                default:
+                    alert('暂不支持编辑此类型');
+            }
+        }
+
+        // ======================================================================
+        //  模态框管理 (支持拖动、全屏、粘贴上传，头部/底部固定)
+        // ======================================================================
+        let modalState = {
+            isFullscreen: false,
+            position: { x: 0, y: 0 },
+            originalPosition: { x: 0, y: 0 },
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 },
+        };
+
+        function openModal(bodyHtml, footerHtml, title = '') {
+            const overlay = document.getElementById('modalOverlay');
+            const sheet = document.getElementById('modalSheet');
+            const modalHtml = `
+                <div class="modal-header" id="modalHeader">
+                    <h3>${title}</h3>
+                    <div class="modal-controls">
+                        <button id="modalFullscreenBtn" title="全屏">⛶</button>
+                        <button id="modalCloseBtn" class="close-btn" title="关闭">✕</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    ${bodyHtml}
+                </div>
+                <div class="modal-footer">
+                    ${footerHtml}
+                </div>
+            `;
+            sheet.innerHTML = modalHtml;
+            sheet.style.transform = 'translate(0, 0)';
+            sheet.style.left = 'auto';
+            sheet.style.top = 'auto';
+            sheet.style.bottom = 'auto';
+            sheet.style.right = 'auto';
+            modalState.isFullscreen = false;
+            modalState.position = { x: 0, y: 0 };
+            modalState.originalPosition = { x: 0, y: 0 };
+            overlay.classList.add('open');
+
+            const header = sheet.querySelector('#modalHeader');
+            const closeBtn = sheet.querySelector('#modalCloseBtn');
+            const fullscreenBtn = sheet.querySelector('#modalFullscreenBtn');
+
+            closeBtn.addEventListener('click', closeModal);
+            fullscreenBtn.addEventListener('click', () => { toggleFullscreen(); });
+
+            header.addEventListener('mousedown', startDrag);
+            header.addEventListener('touchstart', startDragTouch, { passive: false });
+
+            const rect = sheet.getBoundingClientRect();
+            modalState.originalPosition = { x: rect.left, y: rect.top };
+
+            bindDropZoneEvents(sheet);
+            bindPasteHandler();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('open');
+            unbindPasteHandler();
+            modalState.isFullscreen = false;
+            const sheet = document.getElementById('modalSheet');
+            sheet.classList.remove('fullscreen');
+            sheet.style.transform = 'translate(0, 0)';
+            modalState.position = { x: 0, y: 0 };
+        }
+
+        function toggleFullscreen() {
+            const sheet = document.getElementById('modalSheet');
+            const overlay = document.getElementById('modalOverlay');
+            modalState.isFullscreen = !modalState.isFullscreen;
+            if (modalState.isFullscreen) {
+                sheet.classList.add('fullscreen');
+                sheet.style.transform = 'translate(0, 0)';
+                const rect = sheet.getBoundingClientRect();
+                modalState.originalPosition = { x: rect.left, y: rect.top };
+            } else {
+                sheet.classList.remove('fullscreen');
+                sheet.style.transform = 'translate(0, 0)';
+                modalState.position = { x: 0, y: 0 };
+                const rect = sheet.getBoundingClientRect();
+                const overlayRect = overlay.getBoundingClientRect();
+                const left = (overlayRect.width - rect.width) / 2;
+                const top = (overlayRect.height - rect.height) / 2;
+                sheet.style.transform = `translate(${left - rect.left}px, ${top - rect.top}px)`;
+                modalState.position = { x: left - rect.left, y: top - rect.top };
+                modalState.originalPosition = { x: rect.left, y: rect.top };
+            }
+        }
+
+        function startDrag(e) {
+            if (modalState.isFullscreen) return;
+            const sheet = document.getElementById('modalSheet');
+            const rect = sheet.getBoundingClientRect();
+            modalState.isDragging = true;
+            modalState.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', endDrag);
+            e.preventDefault();
+        }
+
+        function onDrag(e) {
+            if (!modalState.isDragging) return;
+            const sheet = document.getElementById('modalSheet');
+            const overlay = document.getElementById('modalOverlay');
+            const overlayRect = overlay.getBoundingClientRect();
+            let x = e.clientX - modalState.dragOffset.x;
+            let y = e.clientY - modalState.dragOffset.y;
+            const sheetRect = sheet.getBoundingClientRect();
+            x = Math.max(0, Math.min(overlayRect.width - sheetRect.width, x));
+            y = Math.max(0, Math.min(overlayRect.height - sheetRect.height, y));
+            const currentRect = sheet.getBoundingClientRect();
+            const dx = x - currentRect.left;
+            const dy = y - currentRect.top;
+            sheet.style.transform = `translate(${dx}px, ${dy}px)`;
+            modalState.position = { x: dx, y: dy };
+        }
+
+        function endDrag() {
+            modalState.isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+        }
+
+        function startDragTouch(e) {
+            if (modalState.isFullscreen) return;
+            const touch = e.touches[0];
+            const sheet = document.getElementById('modalSheet');
+            const rect = sheet.getBoundingClientRect();
+            modalState.isDragging = true;
+            modalState.dragOffset = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            document.addEventListener('touchmove', onDragTouch, { passive: false });
+            document.addEventListener('touchend', endDragTouch);
+            e.preventDefault();
+        }
+
+        function onDragTouch(e) {
+            if (!modalState.isDragging) return;
+            const touch = e.touches[0];
+            const sheet = document.getElementById('modalSheet');
+            const overlay = document.getElementById('modalOverlay');
+            const overlayRect = overlay.getBoundingClientRect();
+            let x = touch.clientX - modalState.dragOffset.x;
+            let y = touch.clientY - modalState.dragOffset.y;
+            const sheetRect = sheet.getBoundingClientRect();
+            x = Math.max(0, Math.min(overlayRect.width - sheetRect.width, x));
+            y = Math.max(0, Math.min(overlayRect.height - sheetRect.height, y));
+            const currentRect = sheet.getBoundingClientRect();
+            const dx = x - currentRect.left;
+            const dy = y - currentRect.top;
+            sheet.style.transform = `translate(${dx}px, ${dy}px)`;
+            modalState.position = { x: dx, y: dy };
+            e.preventDefault();
+        }
+
+        function endDragTouch() {
+            modalState.isDragging = false;
+            document.removeEventListener('touchmove', onDragTouch);
+            document.removeEventListener('touchend', endDragTouch);
+        }
+
+        function bindDropZoneEvents(sheet) {
+            const dropZones = sheet.querySelectorAll('.drop-zone');
+            dropZones.forEach(zone => {
+                const fileInput = zone.querySelector('input[type="file"]');
+                if (!fileInput) return;
+                const newZone = zone.cloneNode(true);
+                zone.parentNode.replaceChild(newZone, zone);
+                const newFileInput = newZone.querySelector('input[type="file"]');
+                newZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    newZone.classList.add('dragover');
+                });
+                newZone.addEventListener('dragleave', () => {
+                    newZone.classList.remove('dragover');
+                });
+                newZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    newZone.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type.startsWith('image/')) {
+                        newFileInput.files = files;
+                        newFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                newFileInput.addEventListener('change', function(e) {
+                    const file = this.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const dataUrl = ev.target.result;
+                        const sheet2 = this.closest('.modal-sheet');
+                        const previewImg = sheet2.querySelector('.preview-img');
+                        if (previewImg) {
+                            previewImg.src = dataUrl;
+                            const wrapper = previewImg.closest('.image-preview-wrapper');
+                            if (wrapper) wrapper.style.display = 'block';
+                        }
+                        const customEvent = new CustomEvent('imageLoaded', { detail: { dataUrl } });
+                        document.dispatchEvent(customEvent);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
+        let pasteHandlerBound = false;
+
+        function bindPasteHandler() {
+            if (pasteHandlerBound) return;
+            document.addEventListener('paste', handlePaste);
+            pasteHandlerBound = true;
+        }
+
+        function unbindPasteHandler() {
+            document.removeEventListener('paste', handlePaste);
+            pasteHandlerBound = false;
+        }
+
+        function handlePaste(e) {
+            const overlay = document.getElementById('modalOverlay');
+            if (!overlay.classList.contains('open')) return;
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const sheet = document.getElementById('modalSheet');
+                    const fileInput = sheet.querySelector('.drop-zone input[type="file"]');
+                    if (fileInput) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const dataUrl = ev.target.result;
+                            const previewImg = sheet.querySelector('.preview-img');
+                            if (previewImg) {
+                                previewImg.src = dataUrl;
+                                const wrapper = previewImg.closest('.image-preview-wrapper');
+                                if (wrapper) wrapper.style.display = 'block';
+                            }
+                            const customEvent = new CustomEvent('imageLoaded', { detail: { dataUrl } });
+                            document.dispatchEvent(customEvent);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // ======================================================================
+        //  完整模态框函数 (所有类型均支持滚动，头部/底部固定)
+        // ======================================================================
+
+        // ----- 投料 -----
+        function openReactionModal(editData = null) {
+            const isEdit = !!editData;
+            const title = isEdit ? '✏️ 编辑投料' : '⚗️ 记录投料';
+            const smList = isEdit ? editData.sm || [''] : [''];
+            const reagentList = isEdit ? editData.reagent || [''] : [''];
+            const notes = isEdit ? editData.notes || '' : '';
+            const existingDataUrl = isEdit ? editData.dataUrl || null : null;
+            let dataUrl = existingDataUrl;
+
+            function buildRows(list, placeholder) {
+                return list.map((val, idx) => `
+                    <div class="entry-row">
+                        <input type="text" placeholder="${placeholder}" value="${val}" />
+                        <span class="remove-entry" style="${list.length <= 1 ? 'visibility:hidden;' : ''}">✕</span>
+                    </div>
+                `).join('');
+            }
+
+            const previewHtml = existingDataUrl ?
+                `<div class="image-preview-wrapper" style="display:block;">
+                    <img class="preview-img" src="${existingDataUrl}" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="reactionRemoveImg">✕</button>
+                </div>` :
+                `<div class="image-preview-wrapper" style="display:none;">
+                    <img class="preview-img" src="" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="reactionRemoveImg">✕</button>
+                </div>`;
+
+            const bodyHtml = `
+                <label>上传现象照片（点击或拖拽，支持粘贴）</label>
+                <div class="drop-zone" id="reactionDropZone">
+                    <div class="hint">
+                        <span class="icon">🖼️</span>
+                        <div>点击选择 或 拖拽图片</div>
+                        <div style="font-size:12px;color:var(--gray);">也可 Ctrl+V 粘贴</div>
+                    </div>
+                    <input type="file" accept="image/*" id="reactionFileInput" />
+                </div>
+                <div id="reactionPreview">
+                    ${previewHtml}
+                </div>
+
+                <label>底物 (SM)</label>
+                <div class="entry-group" id="smGroup">
+                    ${buildRows(smList, '如: 5.0 g, MW 200')}
+                </div>
+                <button class="add-entry-btn" id="addSmBtn">➕ 添加SM</button>
+
+                <label style="margin-top:16px;">试剂</label>
+                <div class="entry-group" id="reagentGroup">
+                    ${buildRows(reagentList, '如: 1.2 eq')}
+                </div>
+                <button class="add-entry-btn" id="addReagentBtn">➕ 添加试剂</button>
+
+                <label>备注</label>
+                <input type="text" id="reactionNotes" value="${notes}" placeholder="条件、温度等" />
+            `;
+
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="modalCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="saveReaction">${isEdit ? '更新' : '保存'}</button>
+                </div>
+            `;
+
+            openModal(bodyHtml, footerHtml, title);
+            const sheet = document.getElementById('modalSheet');
+            const previewDiv = sheet.querySelector('#reactionPreview');
+            const previewImg = sheet.querySelector('.preview-img');
+            const removeBtn = sheet.querySelector('#reactionRemoveImg');
+
+            sheet.querySelector('#modalCancelBtn').addEventListener('click', closeModal);
+
+            document.addEventListener('imageLoaded', function handler(e) {
+                if (e.detail && e.detail.dataUrl) {
+                    dataUrl = e.detail.dataUrl;
+                    previewImg.src = dataUrl;
+                    previewDiv.style.display = 'block';
+                }
+                document.removeEventListener('imageLoaded', handler);
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    dataUrl = null;
+                    previewDiv.style.display = 'none';
+                    previewImg.src = '';
+                    const fileInput = sheet.querySelector('#reactionFileInput');
+                    if (fileInput) fileInput.value = '';
+                });
+            }
+
+            const smGroup = sheet.querySelector('#smGroup');
+            const reagentGroup = sheet.querySelector('#reagentGroup');
+
+            sheet.querySelector('#addSmBtn').addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.className = 'entry-row';
+                row.innerHTML = `<input type="text" placeholder="如: 5.0 g, MW 200" /><span class="remove-entry">✕</span>`;
+                smGroup.appendChild(row);
+                updateRemoveButtons(smGroup);
+            });
+
+            sheet.querySelector('#addReagentBtn').addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.className = 'entry-row';
+                row.innerHTML = `<input type="text" placeholder="如: 1.2 eq" /><span class="remove-entry">✕</span>`;
+                reagentGroup.appendChild(row);
+                updateRemoveButtons(reagentGroup);
+            });
+
+            smGroup.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-entry')) {
+                    const row = e.target.closest('.entry-row');
+                    if (smGroup.children.length > 1) {
+                        row.remove();
+                        updateRemoveButtons(smGroup);
+                    } else {
+                        alert('至少保留一个SM');
+                    }
+                }
+            });
+            reagentGroup.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-entry')) {
+                    const row = e.target.closest('.entry-row');
+                    if (reagentGroup.children.length > 1) {
+                        row.remove();
+                        updateRemoveButtons(reagentGroup);
+                    } else {
+                        alert('至少保留一个试剂');
+                    }
+                }
+            });
+
+            function updateRemoveButtons(container) {
+                const rows = container.querySelectorAll('.entry-row');
+                rows.forEach((row, idx) => {
+                    const del = row.querySelector('.remove-entry');
+                    if (rows.length <= 1) {
+                        del.style.visibility = 'hidden';
+                    } else {
+                        del.style.visibility = 'visible';
+                    }
+                });
+            }
+            updateRemoveButtons(smGroup);
+            updateRemoveButtons(reagentGroup);
+
+            sheet.querySelector('#saveReaction').addEventListener('click', () => {
+                const smInputs = smGroup.querySelectorAll('input');
+                const smVals = Array.from(smInputs).map(inp => inp.value.trim()).filter(v => v);
+                const reagentInputs = reagentGroup.querySelectorAll('input');
+                const reagentVals = Array.from(reagentInputs).map(inp => inp.value.trim()).filter(v => v);
+                const notes = sheet.querySelector('#reactionNotes').value.trim();
+                if (smVals.length === 0) {
+                    alert('请至少输入一个SM');
+                    return;
+                }
+                if (isEdit) {
+                    updateCardInProject(currentProjectId, currentDate, editData.id, {
+                        sm: smVals,
+                        reagent: reagentVals,
+                        notes: notes,
+                        dataUrl: dataUrl
+                    });
+                } else {
+                    addCardToProject(currentProjectId, currentDate, {
+                        type: 'reaction',
+                        sm: smVals,
+                        reagent: reagentVals,
+                        notes: notes,
+                        dataUrl: dataUrl
+                    });
+                }
+                closeModal();
+            });
+        }
+
+        // ----- TLC (取消Rf标注) -----
+        function openTLCModal(editData = null) {
+            const isEdit = !!editData;
+            const title = isEdit ? '✏️ 编辑 TLC' : '🖍️ 记录 TLC';
+            const existingDataUrl = isEdit ? editData.dataUrl || null : null;
+            const existingEluent = isEdit ? editData.eluent || '' : '';
+            const existingNotes = isEdit ? editData.notes || '' : '';
+            let tlcData = existingDataUrl;
+            let imageLoaded = !!existingDataUrl;
+
+            const previewHtml = existingDataUrl ?
+                `<div class="image-preview-wrapper" style="display:block;">
+                    <img class="preview-img" src="${existingDataUrl}" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="tlcRemoveImg">✕</button>
+                </div>` :
+                `<div class="image-preview-wrapper" style="display:none;">
+                    <img class="preview-img" src="" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="tlcRemoveImg">✕</button>
+                </div>`;
+
+            const bodyHtml = `
+                <label>上传 TLC 照片（点击或拖拽，支持粘贴）</label>
+                <div class="drop-zone" id="tlcDropZone">
+                    <div class="hint">
+                        <span class="icon">🖼️</span>
+                        <div>点击选择 或 拖拽图片</div>
+                        <div style="font-size:12px;color:var(--gray);">也可 Ctrl+V 粘贴</div>
+                    </div>
+                    <input type="file" accept="image/*" id="tlcFileInput" />
+                </div>
+                <div id="tlcPreviewArea">
+                    ${previewHtml}
+                </div>
+                <label>展开剂</label>
+                <input type="text" id="tlcEluent" value="${existingEluent}" placeholder="如: PE:EA = 10:1" />
+                <label>备注</label>
+                <input type="text" id="tlcNotes" value="${existingNotes}" placeholder="紫外 254nm" />
+            `;
+
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="modalCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="saveTLC">${isEdit ? '更新' : '保存'}</button>
+                </div>
+            `;
+
+            openModal(bodyHtml, footerHtml, title);
+            const sheet = document.getElementById('modalSheet');
+            sheet.querySelector('#modalCancelBtn').addEventListener('click', closeModal);
+
+            const previewArea = sheet.querySelector('#tlcPreviewArea');
+            const previewImg = sheet.querySelector('.preview-img');
+            const removeBtn = sheet.querySelector('#tlcRemoveImg');
+            const saveBtn = sheet.querySelector('#saveTLC');
+
+            document.addEventListener('imageLoaded', function handler(e) {
+                if (e.detail && e.detail.dataUrl) {
+                    tlcData = e.detail.dataUrl;
+                    imageLoaded = true;
+                    previewImg.src = tlcData;
+                    previewArea.style.display = 'block';
+                }
+                document.removeEventListener('imageLoaded', handler);
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    tlcData = null;
+                    imageLoaded = false;
+                    previewArea.style.display = 'none';
+                    previewImg.src = '';
+                    const fileInput = sheet.querySelector('#tlcFileInput');
+                    if (fileInput) fileInput.value = '';
+                });
+            }
+
+            saveBtn.addEventListener('click', () => {
+                const eluent = sheet.querySelector('#tlcEluent').value.trim();
+                const notes = sheet.querySelector('#tlcNotes').value.trim();
+                const dataToSave = tlcData || existingDataUrl;
+                if (isEdit) {
+                    updateCardInProject(currentProjectId, currentDate, editData.id, {
+                        dataUrl: dataToSave,
+                        eluent: eluent || 'PE:EA = 10:1',
+                        notes: notes
+                    });
+                } else {
+                    addCardToProject(currentProjectId, currentDate, {
+                        type: 'tlc',
+                        dataUrl: dataToSave,
+                        eluent: eluent || 'PE:EA = 10:1',
+                        notes: notes
+                    });
+                }
+                closeModal();
+            });
+        }
+
+        // ----- 仪器通用 -----
+        function openInstrumentModal(type, editData = null) {
+            const isEdit = !!editData;
+            const instrumentNames = {
+                hplc: 'HPLC', gc: 'GC', lcms: 'LC-MS', gcms: 'GC-MS', nmr: '核磁'
+            };
+            const title = isEdit ? `✏️ 编辑 ${instrumentNames[type]}` : `🔬 记录 ${instrumentNames[type]}`;
+            const existingDataUrl = isEdit ? editData.dataUrl || null : null;
+            const existingConditions = isEdit ? editData.conditions || '' : '';
+            const existingNotes = isEdit ? editData.notes || '' : '';
+            let dataUrl = existingDataUrl;
+
+            const previewHtml = existingDataUrl ?
+                `<div class="image-preview-wrapper" style="display:block;">
+                    <img class="preview-img" src="${existingDataUrl}" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="instrumentRemoveImg">✕</button>
+                </div>` :
+                `<div class="image-preview-wrapper" style="display:none;">
+                    <img class="preview-img" src="" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="instrumentRemoveImg">✕</button>
+                </div>`;
+
+            const bodyHtml = `
+                <label>上传图谱/照片（点击或拖拽，支持粘贴）</label>
+                <div class="drop-zone" id="instrumentDropZone">
+                    <div class="hint">
+                        <span class="icon">🖼️</span>
+                        <div>点击选择 或 拖拽图片</div>
+                        <div style="font-size:12px;color:var(--gray);">也可 Ctrl+V 粘贴</div>
+                    </div>
+                    <input type="file" accept="image/*" id="instrumentFile" />
+                </div>
+                <div id="instrumentPreview">
+                    ${previewHtml}
+                </div>
+                <label>条件 (可选)</label>
+                <input type="text" id="instrumentConditions" value="${existingConditions}" placeholder="如: 色谱柱、流动相等" />
+                <label>备注</label>
+                <textarea id="instrumentNotes" rows="2" placeholder="其他信息">${existingNotes}</textarea>
+            `;
+
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="modalCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="saveInstrument">${isEdit ? '更新' : '保存'}</button>
+                </div>
+            `;
+
+            openModal(bodyHtml, footerHtml, title);
+            const sheet = document.getElementById('modalSheet');
+            sheet.querySelector('#modalCancelBtn').addEventListener('click', closeModal);
+
+            const previewDiv = sheet.querySelector('#instrumentPreview');
+            const previewImg = sheet.querySelector('.preview-img');
+            const removeBtn = sheet.querySelector('#instrumentRemoveImg');
+
+            document.addEventListener('imageLoaded', function handler(e) {
+                if (e.detail && e.detail.dataUrl) {
+                    dataUrl = e.detail.dataUrl;
+                    previewImg.src = dataUrl;
+                    previewDiv.style.display = 'block';
+                }
+                document.removeEventListener('imageLoaded', handler);
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    dataUrl = null;
+                    previewDiv.style.display = 'none';
+                    previewImg.src = '';
+                    const fileInput = sheet.querySelector('#instrumentFile');
+                    if (fileInput) fileInput.value = '';
+                });
+            }
+
+            sheet.querySelector('#saveInstrument').addEventListener('click', () => {
+                const notes = sheet.querySelector('#instrumentNotes').value.trim();
+                const conditions = sheet.querySelector('#instrumentConditions').value.trim();
+                if (isEdit) {
+                    updateCardInProject(currentProjectId, currentDate, editData.id, {
+                        dataUrl: dataUrl,
+                        notes: notes,
+                        conditions: conditions || null
+                    });
+                } else {
+                    addCardToProject(currentProjectId, currentDate, {
+                        type: type,
+                        dataUrl: dataUrl,
+                        notes: notes,
+                        conditions: conditions || null
+                    });
+                }
+                closeModal();
+            });
+        }
+
+        // ----- 实验结论 -----
+        function openConclusionModal(editData = null) {
+            const isEdit = !!editData;
+            const title = isEdit ? '✏️ 编辑结论' : '📋 记录实验结论';
+            const existingText = isEdit ? editData.text || '' : '';
+            const existingDataUrl = isEdit ? editData.dataUrl || null : null;
+            let dataUrl = existingDataUrl;
+
+            const previewHtml = existingDataUrl ?
+                `<div class="image-preview-wrapper" style="display:block;">
+                    <img class="preview-img" src="${existingDataUrl}" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="conclusionRemoveImg">✕</button>
+                </div>` :
+                `<div class="image-preview-wrapper" style="display:none;">
+                    <img class="preview-img" src="" style="max-width:100%;border-radius:12px;" />
+                    <button class="remove-img-btn" id="conclusionRemoveImg">✕</button>
+                </div>`;
+
+            const bodyHtml = `
+                <label>结论内容</label>
+                <textarea id="conclusionText" rows="4" placeholder="输入实验结论...">${existingText}</textarea>
+                <label>上传图片（可选，点击或拖拽，支持粘贴）</label>
+                <div class="drop-zone" id="conclusionDropZone">
+                    <div class="hint">
+                        <span class="icon">🖼️</span>
+                        <div>点击选择 或 拖拽图片</div>
+                        <div style="font-size:12px;color:var(--gray);">也可 Ctrl+V 粘贴</div>
+                    </div>
+                    <input type="file" accept="image/*" id="conclusionFileInput" />
+                </div>
+                <div id="conclusionPreview">
+                    ${previewHtml}
+                </div>
+            `;
+
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="modalCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="saveConclusion">${isEdit ? '更新' : '保存'}</button>
+                </div>
+            `;
+
+            openModal(bodyHtml, footerHtml, title);
+            const sheet = document.getElementById('modalSheet');
+            sheet.querySelector('#modalCancelBtn').addEventListener('click', closeModal);
+
+            const previewDiv = sheet.querySelector('#conclusionPreview');
+            const previewImg = sheet.querySelector('.preview-img');
+            const removeBtn = sheet.querySelector('#conclusionRemoveImg');
+
+            document.addEventListener('imageLoaded', function handler(e) {
+                if (e.detail && e.detail.dataUrl) {
+                    dataUrl = e.detail.dataUrl;
+                    previewImg.src = dataUrl;
+                    previewDiv.style.display = 'block';
+                }
+                document.removeEventListener('imageLoaded', handler);
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    dataUrl = null;
+                    previewDiv.style.display = 'none';
+                    previewImg.src = '';
+                    const fileInput = sheet.querySelector('#conclusionFileInput');
+                    if (fileInput) fileInput.value = '';
+                });
+            }
+
+            sheet.querySelector('#saveConclusion').addEventListener('click', () => {
+                const text = sheet.querySelector('#conclusionText').value.trim();
+                if (!text && !dataUrl) {
+                    alert('请至少输入结论内容或上传图片');
+                    return;
+                }
+                if (isEdit) {
+                    updateCardInProject(currentProjectId, currentDate, editData.id, {
+                        text: text,
+                        dataUrl: dataUrl
+                    });
+                } else {
+                    addCardToProject(currentProjectId, currentDate, {
+                        type: 'conclusion',
+                        text: text,
+                        dataUrl: dataUrl
+                    });
+                }
+                closeModal();
+            });
+        }
+
+        // ======================================================================
+        //  图片查看器 (裁剪)
+        // ======================================================================
+        let viewerCardId = null;
+        let cropMode = false;
+        let cropStart = null;
+        let cropEnd = null;
+        let isCropping = false;
+        let cropImageObj = null;
+
+        function openImageViewer(dataUrl, cardId) {
+            viewerCardId = cardId;
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('viewerImg');
+            const canvas = document.getElementById('viewerCanvas');
+            const info = document.getElementById('viewerInfo');
+            img.src = dataUrl;
+            img.style.display = 'block';
+            canvas.style.display = 'none';
+            cropMode = false;
+            cropStart = null;
+            cropEnd = null;
+            cropImageObj = null;
+            info.textContent = '点击 "裁剪" 按钮进入裁剪模式';
+            viewer.classList.add('open');
+        }
+
+        function closeImageViewer() {
+            document.getElementById('imageViewer').classList.remove('open');
+            viewerCardId = null;
+            cropMode = false;
+            document.getElementById('viewerCropBtn').textContent = '✂️ 裁剪';
+            const img = document.getElementById('viewerImg');
+            const canvas = document.getElementById('viewerCanvas');
+            img.style.display = 'block';
+            canvas.style.display = 'none';
+            cropImageObj = null;
+        }
+
+        document.getElementById('viewerCloseBtn').addEventListener('click', closeImageViewer);
+
+        document.getElementById('viewerCropBtn').addEventListener('click', () => {
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('viewerImg');
+            const canvas = document.getElementById('viewerCanvas');
+            const info = document.getElementById('viewerInfo');
+
+            if (!cropMode) {
+                cropMode = true;
+                img.style.display = 'none';
+                canvas.style.display = 'block';
+                const src = img.src;
+                if (!src || src === '') return;
+                if (cropImageObj) {
+                    setupCanvasWithImage(cropImageObj);
+                    return;
+                }
+                const imgObj = new Image();
+                imgObj.onload = function() {
+                    cropImageObj = imgObj;
+                    setupCanvasWithImage(imgObj);
+                };
+                imgObj.onerror = function() {
+                    alert('图片加载失败，请重试');
+                    cropMode = false;
+                    img.style.display = 'block';
+                    canvas.style.display = 'none';
+                    document.getElementById('viewerCropBtn').textContent = '✂️ 裁剪';
+                };
+                imgObj.src = src;
+                document.getElementById('viewerCropBtn').textContent = '✅ 确认裁剪';
+                info.textContent = '正在加载图片...';
+            } else {
+                const canvas2 = document.getElementById('viewerCanvas');
+                if (!canvas2) return;
+                const ctx2 = canvas2.getContext('2d');
+                const w = canvas2.width, h = canvas2.height;
+                const sx = Math.min(cropStart.x, cropEnd.x);
+                const sy = Math.min(cropStart.y, cropEnd.y);
+                const sw = Math.abs(cropEnd.x - cropStart.x);
+                const sh = Math.abs(cropEnd.y - cropStart.y);
+                if (sw < 10 || sh < 10) {
+                    alert('裁剪区域太小，请重新选择');
+                    return;
+                }
+                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas.width = sw;
+                croppedCanvas.height = sh;
+                const croppedCtx = croppedCanvas.getContext('2d');
+                croppedCtx.drawImage(canvas2, sx, sy, sw, sh, 0, 0, sw, sh);
+                const croppedDataUrl = croppedCanvas.toDataURL('image/jpeg', 0.9);
+                if (viewerCardId) {
+                    updateCardInProject(currentProjectId, currentDate, viewerCardId, { dataUrl: croppedDataUrl });
+                }
+                closeImageViewer();
+                renderRecordView();
+            }
+        });
+
+        function setupCanvasWithImage(imgObj) {
+            const canvas = document.getElementById('viewerCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = imgObj.width;
+            canvas.height = imgObj.height;
+            ctx.drawImage(imgObj, 0, 0);
+            const w = canvas.width, h = canvas.height;
+            cropStart = { x: w * 0.25, y: h * 0.25 };
+            cropEnd = { x: w * 0.75, y: h * 0.75 };
+            drawCropOverlay(ctx);
+            const info = document.getElementById('viewerInfo');
+            info.textContent = '拖动鼠标调整裁剪区域，点击 "裁剪" 确认';
+        }
+
+        document.getElementById('viewerCanvas').addEventListener('mousedown', (e) => {
+            if (!cropMode) return;
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            const cx = (cropStart.x + cropEnd.x) / 2;
+            const cy = (cropStart.y + cropEnd.y) / 2;
+            const halfW = Math.abs(cropEnd.x - cropStart.x) / 2;
+            const halfH = Math.abs(cropEnd.y - cropStart.y) / 2;
+            if (x > cx - halfW && x < cx + halfW && y > cy - halfH && y < cy + halfH) {
+                isCropping = 'move';
+                cropStart = { x: x - halfW, y: y - halfH };
+                cropEnd = { x: x + halfW, y: y + halfH };
+            } else {
+                isCropping = 'draw';
+                cropStart = { x, y };
+                cropEnd = { x, y };
+            }
+        });
+
+        document.getElementById('viewerCanvas').addEventListener('mousemove', (e) => {
+            if (!cropMode || !isCropping) return;
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            if (isCropping === 'draw') {
+                cropEnd = { x, y };
+            } else if (isCropping === 'move') {
+                const dx = x - (cropStart.x + cropEnd.x) / 2;
+                const dy = y - (cropStart.y + cropEnd.y) / 2;
+                cropStart.x += dx; cropStart.y += dy;
+                cropEnd.x += dx; cropEnd.y += dy;
+                const w = canvas.width, h = canvas.height;
+                if (cropStart.x < 0) { cropStart.x = 0; cropEnd.x = Math.min(w, cropEnd.x - cropStart.x); }
+                if (cropStart.y < 0) { cropStart.y = 0; cropEnd.y = Math.min(h, cropEnd.y - cropStart.y); }
+                if (cropEnd.x > w) { cropEnd.x = w; cropStart.x = Math.max(0, cropStart.x - (cropEnd.x - w)); }
+                if (cropEnd.y > h) { cropEnd.y = h; cropStart.y = Math.max(0, cropStart.y - (cropEnd.y - h)); }
+            }
+            drawCropOverlay(canvas.getContext('2d'));
+        });
+
+        document.addEventListener('mouseup', () => { isCropping = false; });
+
+        function drawCropOverlay(ctx) {
+            const canvas = ctx.canvas;
+            const w = canvas.width, h = canvas.height;
+            if (cropImageObj) {
+                ctx.drawImage(cropImageObj, 0, 0);
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, w, h);
+                const sx = Math.min(cropStart.x, cropEnd.x);
+                const sy = Math.min(cropStart.y, cropEnd.y);
+                const sw = Math.abs(cropEnd.x - cropStart.x);
+                const sh = Math.abs(cropEnd.y - cropStart.y);
+                ctx.clearRect(sx, sy, sw, sh);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(sx, sy, sw, sh);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(sx, sy, sw, sh);
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'white';
+                ctx.font = '14px system-ui';
+                ctx.fillText(`选择区域: ${Math.round(sw)}×${Math.round(sh)}`, 10, 30);
+            } else {
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = 'white';
+                ctx.font = '20px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('图片加载中...', w / 2, h / 2);
+            }
+        }
+
+        // ======================================================================
+        //  记录视图事件绑定
+        // ======================================================================
+        document.getElementById('recordBackToExperiments').addEventListener('click', () => {
+            if (currentProjectId) showExperimentListView(currentProjectId);
+        });
+        document.getElementById('expBackToProjects').addEventListener('click', showProjectListView);
+
+        document.getElementById('prevDay').addEventListener('click', () => changeDate(-1));
+        document.getElementById('nextDay').addEventListener('click', () => changeDate(1));
+
+        function changeDate(delta) {
+            if (!currentProjectId) return;
+            const d = new Date(currentDate + 'T00:00:00');
+            d.setDate(d.getDate() + delta);
+            const newDate = d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+            if (newDate >= '2026-01-01' && newDate <= '2030-12-31') {
+                currentDate = newDate;
+                renderRecordView();
+            }
+        }
+
+        document.getElementById('datePicker').addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val && val >= '2026-01-01' && val <= '2030-12-31') {
+                currentDate = val;
+                renderRecordView();
+            } else {
+                e.target.value = currentDate;
+            }
+        });
+
+        document.getElementById('tempInput').addEventListener('change', saveEnv);
+        document.getElementById('humidityInput').addEventListener('change', saveEnv);
+
+        function saveEnv() {
+            if (!currentProjectId) return;
+            const temp = document.getElementById('tempInput').value.trim();
+            const humidity = document.getElementById('humidityInput').value.trim();
+            setProjectConditions(currentProjectId, currentDate, { temp, humidity });
+        }
+
+        // 底部工具栏按钮
+        document.querySelectorAll('#bottomBar .btn-tool').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tool = btn.dataset.tool;
+                if (!currentProjectId) return;
+                switch (tool) {
+                    case 'reaction': openReactionModal(); break;
+                    case 'tlc': openTLCModal(); break;
+                    case 'hplc': openInstrumentModal('hplc'); break;
+                    case 'gc': openInstrumentModal('gc'); break;
+                    case 'lcms': openInstrumentModal('lcms'); break;
+                    case 'gcms': openInstrumentModal('gcms'); break;
+                    case 'nmr': openInstrumentModal('nmr'); break;
+                    case 'conclusion': openConclusionModal(); break;
+                }
+            });
+        });
+
+        // ======================================================================
+        //  "新建实验" 按钮 (第二分区)
+        // ======================================================================
+        document.getElementById('newExperimentBtn').addEventListener('click', () => {
+            if (!currentProjectId) return;
+            const today = getToday();
+            const bodyHtml = `
+                <label>选择实验日期</label>
+                <input type="date" id="newExpDate" value="${today}" min="2026-01-01" max="2030-12-31" />
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="newExpCancel">取消</button>
+                    <button class="btn btn-primary" id="newExpConfirm">创建并进入</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '📅 新建实验');
+            document.getElementById('newExpCancel').addEventListener('click', closeModal);
+            document.getElementById('newExpConfirm').addEventListener('click', () => {
+                const date = document.getElementById('newExpDate').value;
+                if (!date) { alert('请选择日期'); return; }
+                const proj = getCurrentProject();
+                if (proj) {
+                    if (!proj.records) proj.records = {};
+                    if (!proj.records[date]) proj.records[date] = [];
+                    saveData();
+                }
+                closeModal();
+                showRecordView(currentProjectId, date);
+            });
+        });
+
+        // ======================================================================
+        //  按项目导出 (第一分区)
+        // ======================================================================
+        document.getElementById('exportSelectedProjectsBtn').addEventListener('click', () => {
+            if (appData.projects.length === 0) { alert('没有项目可导出'); return; }
+            let listHtml = appData.projects.map(p => {
+                const recordCount = Object.values(p.records || {}).reduce((s, arr) => s + arr.length, 0);
+                return `
+                    <div class="date-item">
+                        <input type="checkbox" value="${p.id}" id="proj_${p.id}" checked />
+                        <label for="proj_${p.id}">${p.name} (${p.code || '无代号'})</label>
+                        <span class="record-count">${recordCount} 条记录</span>
+                    </div>
+                `;
+            }).join('');
+            const bodyHtml = `
+                <label>选择要导出的项目（可多选）</label>
+                <div class="date-checkbox-list">${listHtml}</div>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                    <button id="selectAllProj" class="btn btn-secondary" style="flex:0;">全选</button>
+                    <button id="deselectAllProj" class="btn btn-secondary" style="flex:0;">取消全选</button>
+                </div>
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="exportProjCancel">取消</button>
+                    <button class="btn btn-primary" id="exportProjConfirm">导出选定</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '📤 导出项目');
+            document.getElementById('exportProjCancel').addEventListener('click', closeModal);
+            document.getElementById('selectAllProj').addEventListener('click', () => {
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]').forEach(cb => cb.checked = true);
+            });
+            document.getElementById('deselectAllProj').addEventListener('click', () => {
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+            });
+            document.getElementById('exportProjConfirm').addEventListener('click', () => {
+                const selected = [];
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]:checked').forEach(cb => {
+                    selected.push(cb.value);
+                });
+                if (selected.length === 0) {
+                    alert('请至少选择一个项目');
+                    return;
+                }
+                const exportData = { projects: [] };
+                for (const id of selected) {
+                    const proj = appData.projects.find(p => p.id === id);
+                    if (proj) exportData.projects.push(proj);
+                }
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `导出项目_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                closeModal();
+            });
+        });
+
+        // ======================================================================
+        //  导入数据
+        // ======================================================================
+        document.getElementById('importBtn').addEventListener('click', () => {
+            const bodyHtml = `
+                <label>选择 JSON 文件</label>
+                <div class="drop-zone" id="importDropZone">
+                    <div class="hint">
+                        <span class="icon">📂</span>
+                        <div>点击选择 或 拖拽文件</div>
+                    </div>
+                    <input type="file" accept=".json" id="importFileInput2" />
+                </div>
+                <div id="importPreview" style="display:none;margin-top:12px;">
+                    <div style="background:#f8fafc;padding:12px;border-radius:12px;font-size:14px;">
+                        <div><strong>项目名称：</strong><span id="importProjectName"></span></div>
+                        <div><strong>项目代号：</strong><span id="importProjectCode"></span></div>
+                        <div><strong>包含日期：</strong><span id="importDates"></span></div>
+                        <div><strong>总记录数：</strong><span id="importCount"></span></div>
+                    </div>
+                </div>
+                <label style="margin-top:12px;">导入到哪个项目？</label>
+                <select id="importTargetProject">
+                    <option value="__new__">📁 新建项目</option>
+                    ${appData.projects.map(p => `<option value="${p.id}">${p.name} (${p.code || '无代号'})</option>`).join('')}
+                </select>
+                <div id="importNewProjectFields" style="display:none;margin-top:8px;">
+                    <label>新项目名称</label>
+                    <input type="text" id="importNewName" placeholder="输入项目名称" />
+                    <label>新项目代号</label>
+                    <input type="text" id="importNewCode" placeholder="输入代号" />
+                </div>
+                <label>合并模式</label>
+                <select id="importMergeMode">
+                    <option value="append">追加记录（不覆盖）</option>
+                    <option value="replace">替换同日期记录</option>
+                </select>
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="importCancel">取消</button>
+                    <button class="btn btn-primary" id="importConfirm" disabled>导入</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '📥 导入数据');
+            document.getElementById('importCancel').addEventListener('click', closeModal);
+
+            let importData = null;
+
+            const targetSelect = document.querySelector('#importTargetProject');
+            const newFields = document.querySelector('#importNewProjectFields');
+            targetSelect.addEventListener('change', () => {
+                if (targetSelect.value === '__new__') { newFields.style.display = 'block'; } else { newFields.style.display = 'none'; }
+            });
+
+            const dropZone = document.querySelector('#importDropZone');
+            const fileInput = document.querySelector('#importFileInput2');
+            const previewDiv = document.querySelector('#importPreview');
+            const confirmBtn = document.querySelector('#importConfirm');
+
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const parsed = JSON.parse(ev.target.result);
+                        let projectList = [];
+                        if (parsed.projects && Array.isArray(parsed.projects)) {
+                            projectList = parsed.projects;
+                        } else if (parsed.id && parsed.records) {
+                            projectList = [parsed];
+                        } else if (parsed.project && parsed.records) {
+                            projectList = [parsed.project || parsed];
+                        } else {
+                            alert('无效的数据文件格式');
+                            confirmBtn.disabled = true;
+                            return;
+                        }
+                        if (projectList.length === 0) {
+                            alert('没有可导入的项目');
+                            confirmBtn.disabled = true;
+                            return;
+                        }
+                        const proj = projectList[0];
+                        const records = proj.records || {};
+                        const dates = Object.keys(records).filter(d => records[d].length > 0);
+                        const total = dates.reduce((sum, d) => sum + records[d].length, 0);
+                        document.getElementById('importProjectName').textContent = proj.name || '未知';
+                        document.getElementById('importProjectCode').textContent = proj.code || '无';
+                        document.getElementById('importDates').textContent = dates.join(', ') || '无';
+                        document.getElementById('importCount').textContent = total;
+                        previewDiv.style.display = 'block';
+                        importData = proj;
+                        confirmBtn.disabled = false;
+                    } catch (err) {
+                        alert('文件解析失败，请检查格式');
+                        confirmBtn.disabled = true;
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            document.getElementById('importConfirm').addEventListener('click', () => {
+                if (!importData) return;
+                const targetId = targetSelect.value;
+                let targetProj = null;
+                if (targetId === '__new__') {
+                    const name = document.getElementById('importNewName').value.trim();
+                    const code = document.getElementById('importNewCode').value.trim();
+                    if (!name) { alert('请输入新项目名称'); return; }
+                    targetProj = { id: genId(), name: name, code: code || '', createdAt: Date.now(), records: {}, conditions: {}, projectInfo: {} };
+                    appData.projects.push(targetProj);
+                } else {
+                    targetProj = appData.projects.find(p => p.id === targetId);
+                    if (!targetProj) { alert('目标项目不存在'); return; }
+                }
+                const mergeMode = document.getElementById('importMergeMode').value;
+                const importedRecords = importData.records || {};
+                const importedConditions = importData.conditions || {};
+                const importedProjectInfo = importData.projectInfo || {};
+
+                if (!targetProj.records) targetProj.records = {};
+                if (!targetProj.conditions) targetProj.conditions = {};
+                if (!targetProj.projectInfo) targetProj.projectInfo = {};
+
+                for (const date in importedRecords) {
+                    if (!targetProj.records[date]) targetProj.records[date] = [];
+                    if (mergeMode === 'append') {
+                        for (const card of importedRecords[date]) {
+                            targetProj.records[date].push({ ...card, id: genCardId() });
+                        }
+                    } else if (mergeMode === 'replace') {
+                        targetProj.records[date] = importedRecords[date].map(c => ({ ...c, id: genCardId() }));
+                    }
+                    if (importedConditions[date]) {
+                        targetProj.conditions[date] = { ...targetProj.conditions[date], ...importedConditions[date] };
+                    }
+                    if (importedProjectInfo[date]) {
+                        targetProj.projectInfo[date] = { ...targetProj.projectInfo[date], ...importedProjectInfo[date] };
+                    }
+                }
+                saveData();
+                closeModal();
+                if (currentProjectId === targetProj.id) {
+                    renderRecordView();
+                } else {
+                    renderProjectList();
+                }
+                alert(`成功导入 ${Object.keys(importedRecords).length} 天的数据到项目 "${targetProj.name}"`);
+            });
+        });
+
+        // ======================================================================
+        //  搜索功能
+        // ======================================================================
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            document.getElementById('searchClearBtn').style.display = val ? 'inline-block' : 'none';
+            renderProjectList();
+        });
+        document.getElementById('searchClearBtn').addEventListener('click', () => {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchClearBtn').style.display = 'none';
+            renderProjectList();
+        });
+
+        // ======================================================================
+        //  新建项目
+        // ======================================================================
+        document.getElementById('newProjectBtn').addEventListener('click', () => {
+            const bodyHtml = `
+                <label>项目名称</label>
+                <input type="text" id="newProjectName" placeholder="输入项目名称" />
+                <label>项目代号 (可选)</label>
+                <input type="text" id="newProjectCode" placeholder="如: RXN-2026" />
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="newProjectCancel">取消</button>
+                    <button class="btn btn-primary" id="newProjectConfirm">创建</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '📁 新建项目');
+            document.getElementById('newProjectCancel').addEventListener('click', closeModal);
+            document.getElementById('newProjectConfirm').addEventListener('click', () => {
+                const name = document.getElementById('newProjectName').value.trim();
+                const code = document.getElementById('newProjectCode').value.trim();
+                if (!name) { alert('请输入项目名称'); return; }
+                const newProj = { id: genId(), name: name, code: code || '', createdAt: Date.now(), records: {}, conditions: {}, projectInfo: {} };
+                appData.projects.push(newProj);
+                saveData();
+                closeModal();
+                renderProjectList();
+            });
+        });
+
+        // ======================================================================
+        //  导出选定日期 (第三分区)
+        // ======================================================================
+        document.getElementById('exportSelectedBtn').addEventListener('click', () => {
+            if (!currentProjectId) return;
+            const proj = getCurrentProject();
+            if (!proj) return;
+            const records = proj.records || {};
+            const dates = Object.keys(records).filter(d => records[d].length > 0);
+            if (dates.length === 0) {
+                alert('该项目还没有任何记录可导出');
+                return;
+            }
+            let listHtml = dates.map(d => {
+                const count = records[d].length;
+                return `
+                    <div class="date-item">
+                        <input type="checkbox" value="${d}" id="date_${d}" checked />
+                        <label for="date_${d}">${d}</label>
+                        <span class="record-count">${count} 条记录</span>
+                    </div>
+                `;
+            }).join('');
+            const bodyHtml = `
+                <label>选择要导出的日期（可多选）</label>
+                <div class="date-checkbox-list">${listHtml}</div>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                    <button id="selectAllDates" class="btn btn-secondary" style="flex:0;">全选</button>
+                    <button id="deselectAllDates" class="btn btn-secondary" style="flex:0;">取消全选</button>
+                </div>
+            `;
+            const footerHtml = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="exportDateCancel">取消</button>
+                    <button class="btn btn-primary" id="exportDateConfirm">导出选定</button>
+                </div>
+            `;
+            openModal(bodyHtml, footerHtml, '📤 导出选定日期');
+            document.getElementById('exportDateCancel').addEventListener('click', closeModal);
+            document.getElementById('selectAllDates').addEventListener('click', () => {
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]').forEach(cb => cb.checked = true);
+            });
+            document.getElementById('deselectAllDates').addEventListener('click', () => {
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+            });
+            document.getElementById('exportDateConfirm').addEventListener('click', () => {
+                const selected = [];
+                document.querySelectorAll('#modalSheet .date-item input[type="checkbox"]:checked').forEach(cb => {
+                    selected.push(cb.value);
+                });
+                if (selected.length === 0) {
+                    alert('请至少选择一个日期');
+                    return;
+                }
+                const exportData = {
+                    project: { name: proj.name, code: proj.code || '', id: proj.id },
+                    records: {},
+                    conditions: {},
+                    projectInfo: {}
+                };
+                for (const date of selected) {
+                    if (proj.records[date]) exportData.records[date] = proj.records[date];
+                    if (proj.conditions && proj.conditions[date]) exportData.conditions[date] = proj.conditions[date];
+                    if (proj.projectInfo && proj.projectInfo[date]) exportData.projectInfo[date] = proj.projectInfo[date];
+                }
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${proj.name}_导出_${selected.join('_')}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                closeModal();
+            });
+        });
+
+        // ======================================================================
+        //  初始化
+        // ======================================================================
+        if (appData.projects.length === 0) {
+            const defaultProj = { id: genId(), name: '默认项目', code: 'DEFAULT', createdAt: Date.now(), records: {}, conditions: {}, projectInfo: {} };
+            appData.projects.push(defaultProj);
+            saveData();
+        }
+        showProjectListView();
+        console.log('🧪 实验记录已启动 (v19) — 模态框头部/底部固定，可滑动，按钮样式统一');
+    </script>
+</body>
+</html>
